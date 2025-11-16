@@ -116,7 +116,7 @@ pub enum GraphicsColor {
     Monochrome,
     Color16,
     Fullcolor,
-    Experimental,
+    Custom,
 }
 
 #[serde_with::serde_as]
@@ -129,6 +129,8 @@ pub struct Settings {
     pub graphics_style: GraphicsStyle,
     pub graphics_color: GraphicsColor,
     pub graphics_color_locked: GraphicsColor,
+    #[serde_as(as = "HashMap<serde_with::json::JsonString, _>")]
+    pub graphics_color_custom_palette: HashMap<u8, crossterm::style::Color>,
     pub save_data_on_exit: bool,
 }
 
@@ -229,6 +231,9 @@ impl<T: Write> Application<T> {
                 graphics_style: GraphicsStyle::Unicode,
                 graphics_color: GraphicsColor::Fullcolor,
                 graphics_color_locked: GraphicsColor::Fullcolor,
+                graphics_color_custom_palette: HashMap::from(
+                    game_renderers::COLOR_PALETTE_EXPERIMENTAL,
+                ),
                 save_data_on_exit: false,
             },
             game_config: GameConfig::default(),
@@ -1442,9 +1447,10 @@ impl<T: Write> Application<T> {
             for tet in Tetromino::VARIANTS {
                 self.term.queue(PrintStyledContent(
                     tet_str_small(&tet).with(
-                        game_renderers::tile_to_color(self.settings.graphics_color)(
-                            tet.tiletypeid(),
-                        )
+                        game_renderers::tile_to_color(
+                            self.settings.graphics_color,
+                            &self.settings.graphics_color_custom_palette,
+                        )(tet.tiletypeid())
                         .unwrap_or(style::Color::Reset),
                     ),
                 ))?;
@@ -1521,8 +1527,8 @@ impl<T: Write> Application<T> {
                         self.settings.graphics_color = match self.settings.graphics_color {
                             GraphicsColor::Monochrome => GraphicsColor::Color16,
                             GraphicsColor::Color16 => GraphicsColor::Fullcolor,
-                            GraphicsColor::Fullcolor => GraphicsColor::Experimental,
-                            GraphicsColor::Experimental => GraphicsColor::Monochrome,
+                            GraphicsColor::Fullcolor => GraphicsColor::Custom,
+                            GraphicsColor::Custom => GraphicsColor::Monochrome,
                         };
                         self.settings.graphics_color_locked = self.settings.graphics_color;
                     }
@@ -1552,10 +1558,10 @@ impl<T: Write> Application<T> {
                     }
                     3 => {
                         self.settings.graphics_color = match self.settings.graphics_color {
-                            GraphicsColor::Monochrome => GraphicsColor::Experimental,
+                            GraphicsColor::Monochrome => GraphicsColor::Custom,
                             GraphicsColor::Color16 => GraphicsColor::Monochrome,
                             GraphicsColor::Fullcolor => GraphicsColor::Color16,
-                            GraphicsColor::Experimental => GraphicsColor::Fullcolor,
+                            GraphicsColor::Custom => GraphicsColor::Fullcolor,
                         };
                         self.settings.graphics_color_locked = self.settings.graphics_color;
                     }

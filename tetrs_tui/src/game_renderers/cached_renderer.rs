@@ -16,14 +16,11 @@ use tetrs_engine::{
     TileTypeID,
 };
 
-use crate::{
-    game_renderers::Renderer,
-    terminal_user_interface::{
-        fmt_duration, fmt_keybinds, Application, GraphicsColor, GraphicsStyle, RunningGameStats,
-    },
+use crate::terminal_user_interface::{
+    fmt_duration, fmt_keybinds, Application, GraphicsColor, GraphicsStyle, RunningGameStats,
 };
 
-use super::{tet_str_minuscule, tet_str_small, tile_to_color};
+use super::{tet_str_minuscule, tet_str_small, tile_to_color, Renderer};
 
 #[derive(Clone, Default, Debug)]
 struct ScreenBuf {
@@ -435,8 +432,14 @@ impl Renderer for CachedRenderer {
         let (x_messages, y_messages) = (47, 18);
         let pos_board = |(x, y)| (x_board + 2 * x, y_board + Game::SKYLINE - y);
         // Board: helpers.
-        let color = tile_to_color(app.settings().graphics_color);
-        let color_locked = tile_to_color(app.settings().graphics_color_locked);
+        let color = tile_to_color(
+            app.settings().graphics_color,
+            &app.settings().graphics_color_custom_palette,
+        );
+        let color_locked = tile_to_color(
+            app.settings().graphics_color_locked,
+            &app.settings().graphics_color_custom_palette,
+        );
         // Board: draw hard drop trail.
         for (event_time, pos, h, tile_type_id, relevant) in self.hard_drop_tiles.iter_mut() {
             let elapsed = game_time.saturating_sub(*event_time);
@@ -583,7 +586,7 @@ impl Renderer for CachedRenderer {
                     let color_locking = match app.settings().graphics_color {
                         GraphicsColor::Monochrome => None,
                         GraphicsColor::Color16 | GraphicsColor::Fullcolor => Some(Color::White),
-                        GraphicsColor::Experimental => Some(Color::Rgb {
+                        GraphicsColor::Custom => Some(Color::Rgb {
                             r: 207,
                             g: 207,
                             b: 207,
@@ -649,7 +652,7 @@ impl Renderer for CachedRenderer {
                         GraphicsColor::Monochrome => None,
                         GraphicsColor::Color16
                         | GraphicsColor::Fullcolor
-                        | GraphicsColor::Experimental => Some(Color::White),
+                        | GraphicsColor::Custom => Some(Color::White),
                     };
                     let percent = elapsed.as_secs_f64() / line_clear_delay.as_secs_f64();
                     // SAFETY: `0.0 <= percent && percent <= 1.0`.
@@ -753,6 +756,8 @@ impl Renderer for CachedRenderer {
         self.messages.retain(|(timestamp, _message)| {
             game_time.saturating_sub(*timestamp) < Duration::from_millis(7000)
         });
+        drop(color);
+        drop(color_locked);
         self.screen.flush(&mut app.term)
     }
 }
