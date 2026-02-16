@@ -1,2 +1,4 @@
 # tetrs
-DEPRECATED - New repo is tetro-tui
+DEPRECATED - New repo is tetro-tui:
+
+https://github.com/Strophox/tetro-tui
